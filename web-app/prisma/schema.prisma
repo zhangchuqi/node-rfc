@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// SAP Connection Configuration
+model SAPConnection {
+  id             String         @id @default(uuid())
+  name           String         @unique
+  connectionType ConnectionType
+  
+  // Basic connection parameters
+  host           String         @map("ashost")
+  systemNumber   String         @map("sysnr")
+  client         String
+  user           String
+  password       String         // Consider encrypting in production
+  language       String         @default("EN") @map("lang")
+  
+  // Optional connection parameters
+  saprouter      String?
+  sncMode        String?        @map("snc_mode")
+  sncQop         String?        @map("snc_qop")
+  sncMyname      String?        @map("snc_myname")
+  sncPartnername String?        @map("snc_partnername")
+  trace          String?
+  
+  // Connection-specific options (stored as JSON)
+  poolOptions    Json?          // For POOL type: { low: number, high: number }
+  clientOptions  Json?          // For all types: { timeout, bcd, filter, etc. }
+  
+  // Metadata
+  isActive       Boolean        @default(true)
+  description    String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  
+  // Relations
+  callLogs       CallLog[]
+  
+  @@index([connectionType])
+  @@index([isActive])
+  @@map("sap_connections")
+}
+
+enum ConnectionType {
+  CLIENT
+  POOL
+}
+
+// Call History/Logs
+model CallLog {
+  id           String        @id @default(uuid())
+  connectionId String
+  connection   SAPConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  
+  // Call details
+  rfmName      String        @map("rfm_name")
+  parameters   Json?         // Input parameters
+  result       Json?         // Output result
+  
+  // Performance metrics
+  duration     Int           // milliseconds
+  status       CallStatus
+  errorMessage String?       @db.Text
+  errorCode    String?
+  errorKey     String?
+  
+  // Metadata
+  calledAt     DateTime      @default(now())
+  
+  @@index([connectionId])
+  @@index([status])
+  @@index([calledAt])
+  @@index([rfmName])
+  @@map("call_logs")
+}
+
+enum CallStatus {
+  SUCCESS
+  ERROR
+  TIMEOUT
+  CANCELLED
+}
