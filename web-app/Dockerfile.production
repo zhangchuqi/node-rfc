@@ -1,0 +1,66 @@
+# 生产环境 Dockerfile（需要真实的 SAP NW RFC SDK）
+FROM node:18-bullseye
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    wget \
+    unzip \
+    libuuid1 \
+    libstdc++6 \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
+
+# ============================================
+# 第一步：安装 SAP NW RFC SDK
+# ============================================
+# 从项目根目录复制 nwrfcsdk
+COPY ../nwrfcsdk /usr/local/sap/nwrfcsdk
+
+# 设置 SAP SDK 环境变量
+ENV SAPNWRFC_HOME=/usr/local/sap/nwrfcsdk
+ENV LD_LIBRARY_PATH=/usr/local/sap/nwrfcsdk/lib:$LD_LIBRARY_PATH
+ENV NODE_ENV=production
+
+# ============================================
+# 第二步：构建 node-rfc
+# ============================================
+WORKDIR /build
+
+# 复制 node-rfc 源码
+COPY package*.json ./
+COPY binding.gyp ./
+COPY src ./src
+COPY lib ./lib
+
+# 安装并构建 node-rfc（创建预编译文件）
+RUN npm install --build-from-source && \
+    npm run build
+
+# ============================================
+# 第三步：构建 web-app
+# ============================================
+WORKDIR /app
+
+# 复制 web-app 依赖文件
+COPY web-app/package*.json ./
+COPY web-app/prisma ./prisma
+
+# 复制构建好的 node-rfc（作为本地依赖）
+COPY --from=0 /build /app/node-rfc
+
+# 安装 web-app 依赖
+RUN npm ci --only=production
+
+# 生成 Prisma 客户端
+RUN npx prisma generate
+
+# 复制 web-app 代码
+COPY web-app/ .
+
+# 构建 Next.js
+RUN npm run build
+
+EXPOSE 3000
+
+# 启动命令
+CMD npx prisma migrate deploy && npm start

@@ -10,6 +10,25 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// User Authentication
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String?
+  password      String    // hashed password
+  role          UserRole  @default(USER)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
 // SAP Connection Configuration
 model SAPConnection {
   id             String         @id @default(uuid())

@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+*.log
+.DS_Store
+.env.local
+test
+doc
+examples
+sap_sdk/*.zip
+*.zip
+build
+coverage
+.vscode
+.idea
