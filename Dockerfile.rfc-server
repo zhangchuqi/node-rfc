@@ -18,8 +18,9 @@ COPY nwrfcsdk /usr/local/sap/nwrfcsdk
 ENV SAPNWRFC_HOME=/usr/local/sap/nwrfcsdk
 ENV LD_LIBRARY_PATH=/usr/local/sap/nwrfcsdk/lib
 ENV LIBRARY_PATH=/usr/local/sap/nwrfcsdk/lib
-ENV NODE_ENV=production
 ENV PORT=3001
+
+# 注意：不要在构建阶段设置 NODE_ENV=production，否则不会安装 devDependencies
 
 WORKDIR /app
 
@@ -44,6 +45,9 @@ RUN npm install
 
 # 切回主目录
 WORKDIR /app
+
+# 现在设置生产环境变量
+ENV NODE_ENV=production
 
 EXPOSE 3001
 
