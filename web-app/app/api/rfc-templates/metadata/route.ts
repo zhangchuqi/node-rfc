@@ -75,15 +75,18 @@ export async function POST(request: Request) {
       }
 
       // 解析参数结构
+      // RFC_GET_FUNCTION_INTERFACE 返回的字段名可能是：
+      // IMPORT_PARAMETER, EXPORT_PARAMETER, CHANGING_PARAMETER, TABLES_PARAMETER
+      // 或者 IMPORTING, EXPORTING, CHANGING, TABLES
       const inputSchema = {
-        IMPORTING: metadata.IMPORT_PARAMETER || [],
-        TABLES: metadata.TABLES || [],
-        CHANGING: metadata.CHANGING_PARAMETER || [],
+        IMPORTING: metadata.IMPORT_PARAMETER || metadata.IMPORTING || [],
+        TABLES: metadata.TABLES_PARAMETER || metadata.TABLES || [],
+        CHANGING: metadata.CHANGING_PARAMETER || metadata.CHANGING || [],
       };
 
       const outputSchema = {
-        EXPORTING: metadata.EXPORT_PARAMETER || [],
-        TABLES: metadata.TABLES || [],
+        EXPORTING: metadata.EXPORT_PARAMETER || metadata.EXPORTING || [],
+        TABLES: metadata.TABLES_PARAMETER || metadata.TABLES || [],
       };
 
       return NextResponse.json({

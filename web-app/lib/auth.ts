@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prisma';
 
 export const authConfig: NextAuthConfig = {
+  trustHost: true, // 信任所有主机（Railway 动态域名）
   providers: [
     Credentials({
       name: 'credentials',
