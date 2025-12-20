@@ -63,6 +63,7 @@ model SAPConnection {
   
   // Relations
   callLogs       CallLog[]
+  rfcTemplates   RFCTemplate[]
   
   @@index([connectionType])
   @@index([isActive])
@@ -107,4 +108,61 @@ enum CallStatus {
   ERROR
   TIMEOUT
   CANCELLED
+}
+
+// RFC Template - 预定义的 RFC 配置
+model RFCTemplate {
+  id              String         @id @default(uuid())
+  name            String         @unique
+  description     String?
+  connectionId    String
+  connection      SAPConnection  @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  
+  // RFC 配置
+  rfmName         String         @map("rfm_name")
+  parameters      Json?          // 默认参数模板
+  
+  // API 配置
+  apiPath         String?        @unique @map("api_path") // 例如: /api/rfc/get-customer
+  apiKey          String         @map("api_key") // 强制要求 API Key
+  
+  // 元数据
+  isActive        Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  // 调用历史
+  calls           RFCCall[]
+  
+  @@index([apiPath])
+  @@index([isActive])
+  @@map("rfc_templates")
+}
+
+// RFC 调用记录（从 CallLog 独立出来）
+model RFCCall {
+  id           String        @id @default(uuid())
+  templateId   String?
+  template     RFCTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  
+  // 调用详情
+  rfmName      String        @map("rfm_name")
+  parameters   Json?
+  result       Json?
+  
+  // 性能指标
+  duration     Int           // milliseconds
+  status       CallStatus
+  errorMessage String?       @db.Text
+  
+  // 来源
+  source       String?       // "web", "api", "external"
+  calledBy     String?       // IP 或用户标识
+  
+  calledAt     DateTime      @default(now())
+  
+  @@index([templateId])
+  @@index([status])
+  @@index([calledAt])
+  @@map("rfc_calls")
 }

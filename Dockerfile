@@ -54,14 +54,17 @@ COPY web-app ./web-app
 # 进入 web-app 目录
 WORKDIR /app/web-app
 
-# 安装 web-app 依赖
-RUN npm ci --only=production
+# 安装 web-app 依赖（包括 devDependencies，build 需要 TypeScript）
+RUN npm ci
 
 # 生成 Prisma 客户端
 RUN npx prisma generate
 
 # 构建 Next.js
 RUN npm run build
+
+# 清理 devDependencies 以减小镜像大小
+RUN npm prune --production
 
 EXPOSE 3000
 

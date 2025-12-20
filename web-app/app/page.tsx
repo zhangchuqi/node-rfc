@@ -38,6 +38,18 @@ export default function Home() {
 
           <Card>
             <CardHeader>
+              <CardTitle>RFC Templates</CardTitle>
+              <CardDescription>Manage predefined RFC configurations</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/rfc-templates">
+                <Button className="w-full">View Templates</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Call History</CardTitle>
               <CardDescription>View past RFC call logs</CardDescription>
             </CardHeader>
