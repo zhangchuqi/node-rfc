@@ -29,8 +29,10 @@ COPY binding.gyp ./
 COPY tsconfig.json ./
 COPY src ./src
 
-# 安装依赖并构建 node-rfc
+# 安装所有依赖（包括 devDependencies，构建需要 typescript）
 RUN npm install
+
+# 构建 node-rfc（生成 .node 和编译 TypeScript）
 RUN npm run build
 
 # 复制 API 服务器代码
