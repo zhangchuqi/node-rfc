@@ -50,22 +50,15 @@ RUN echo "SAPNWRFC_HOME=$SAPNWRFC_HOME" && \
 
 # 复制 web-app
 WORKDIR /app/web-app
+
+# 先复制 package.json
 COPY web-app/package*.json ./
 
 # 安装 web-app 依赖（包括 devDependencies，build 需要 TypeScript）
 RUN npm install
 
-# 复制 web-app 源代码（排除 node_modules）
-COPY web-app/app ./app
-COPY web-app/components ./components
-COPY web-app/lib ./lib
-COPY web-app/prisma ./prisma
-COPY web-app/scripts ./scripts
-COPY web-app/*.ts ./
-COPY web-app/*.js ./
-COPY web-app/*.mjs ./
-COPY web-app/*.json ./
-COPY web-app/middleware.ts ./
+# 复制 web-app 源代码（.dockerignore 会排除 node_modules 和 .next）
+COPY web-app/ ./
 
 # 生成 Prisma 客户端
 RUN npx prisma generate
