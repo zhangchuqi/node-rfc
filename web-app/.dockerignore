@@ -1,0 +1,11 @@
+node_modules
+.next
+.git
+*.log
+.DS_Store
+.env.local
+*.zip
+.vscode
+.idea
+dev_rfc.log
+_noderfc.log

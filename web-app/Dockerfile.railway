@@ -1,4 +1,4 @@
-# Railway 部署配置
+# Railway 部署配置 - Mock 模式（不需要 SAP SDK）
 FROM node:18-bullseye-slim
 
 # 安装系统依赖
@@ -11,21 +11,20 @@ ENV MOCK_MODE=true
 
 WORKDIR /app
 
-# 先复制 web-app 的依赖文件
-COPY web-app/package*.json ./
-COPY web-app/prisma ./prisma
+# 复制所有文件（.dockerignore 会排除 node_modules）
+COPY . .
 
-# 安装依赖
-RUN npm ci --only=production
+# 安装所有依赖（包括 devDependencies，因为需要 TypeScript 来构建）
+RUN npm install
 
 # 生成 Prisma 客户端
 RUN npx prisma generate
 
-# 复制应用代码
-COPY web-app/ .
-
 # 构建 Next.js
 RUN npm run build
+
+# 清理 devDependencies
+RUN npm prune --production
 
 EXPOSE 3000
 
