@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { callRFC } from '@/lib/sap-client';
+import { applyMapping, applyReverseMapping, mergeWithDefaults } from '@/lib/json-mapper';
 
 // 公共 API 端点 - 通过 API 路径调用 RFC
 export async function POST(
@@ -63,8 +64,21 @@ export async function POST(
       ...(body.parameters || {}),
     };
 
+    // 应用输入映射（如果配置了映射规则）
+    const mappedParams = template.inputMapping 
+      ? applyMapping(body.parameters || {}, template.inputMapping as any)
+      : body.parameters || {};
+
+    // 合并映射后的参数和默认参数
+    const rfcParams = mergeWithDefaults(mappedParams, template.parameters as any);
+
     // 调用 SAP RFC
-    const result = await callRFC(template.connection, template.rfmName, finalParams);
+    const rfcResult = await callRFC(template.connection, template.rfmName, rfcParams);
+
+    // 应用输出映射（如果配置了映射规则）
+    const apiResult = template.outputMapping
+      ? applyReverseMapping(rfcResult, template.outputMapping as any)
+      : rfcResult;
 
     const duration = Date.now() - startTime;
 
@@ -73,8 +87,8 @@ export async function POST(
       data: {
         templateId: template.id,
         rfmName: template.rfmName,
-        parameters: finalParams,
-        result: result as any,
+        parameters: rfcParams,
+        result: rfcResult as any,
         duration,
         status: 'SUCCESS',
         source: 'api',
@@ -84,7 +98,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      data: result,
+      data: apiResult,
       meta: {
         duration,
         rfmName: template.rfmName,

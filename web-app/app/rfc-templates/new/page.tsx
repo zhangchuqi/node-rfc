@@ -9,7 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { RefreshCw } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import JSONMapper from '@/components/JSONMapper';
+import { RefreshCw, Search, Play, FileJson } from 'lucide-react';
 
 interface Connection {
   id: string;
@@ -17,10 +19,32 @@ interface Connection {
   isActive: boolean;
 }
 
+interface RFCMetadata {
+  inputSchema: any;
+  outputSchema: any;
+  description: string;
+}
+
+interface MappingRule {
+  id: string;
+  source: string;
+  target: string;
+  type: 'field' | 'constant' | 'expression';
+  value?: string;
+}
+
 export default function NewRFCTemplatePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [loadingMetadata, setLoadingMetadata] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [metadata, setMetadata] = useState<RFCMetadata | null>(null);
+  const [testResult, setTestResult] = useState<any>(null);
+  const [inputMappings, setInputMappings] = useState<MappingRule[]>([]);
+  const [outputMappings, setOutputMappings] = useState<MappingRule[]>([]);
+  const [apiInputExample, setApiInputExample] = useState('{"customerId": "100001"}');
+  const [apiOutputExample, setApiOutputExample] = useState('{}');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -53,6 +77,83 @@ export default function NewRFCTemplatePage() {
     setFormData({ ...formData, apiKey: key });
   };
 
+  const fetchMetadata = async () => {
+    if (!formData.connectionId || !formData.rfmName) {
+      alert('Please select a connection and enter RFC function name first');
+      return;
+    }
+
+    setLoadingMetadata(true);
+    setMetadata(null);
+
+    try {
+      const res = await fetch('/api/rfc-templates/metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          connectionId: formData.connectionId,
+          rfmName: formData.rfmName,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setMetadata(data.data);
+        if (data.data.description && !formData.description) {
+          setFormData({ ...formData, description: data.data.description });
+        }
+      } else {
+        alert('Error: ' + data.error);
+      }
+    } catch (error: any) {
+      alert('Error fetching metadata: ' + error.message);
+    } finally {
+      setLoadingMetadata(false);
+    }
+  };
+
+  const testRFC = async () => {
+    if (!formData.connectionId || !formData.rfmName) {
+      alert('Please select a connection and enter RFC function name first');
+      return;
+    }
+
+    // Validate JSON parameters
+    let params;
+    try {
+      params = JSON.parse(formData.parameters);
+    } catch (error) {
+      alert('Invalid JSON format in parameters');
+      return;
+    }
+
+    setTesting(true);
+    setTestResult(null);
+
+    try {
+      const res = await fetch('/api/rfc-templates/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          connectionId: formData.connectionId,
+          rfmName: formData.rfmName,
+          parameters: params,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setTestResult(data.data);
+      } else {
+        alert('Test failed: ' + data.error);
+      }
+    } catch (error: any) {
+      alert('Error testing RFC: ' + error.message);
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -72,6 +173,10 @@ export default function NewRFCTemplatePage() {
       connectionId: formData.connectionId,
       rfmName: formData.rfmName.toUpperCase(),
       parameters: JSON.parse(formData.parameters),
+      inputSchema: metadata?.inputSchema || null,
+      outputSchema: metadata?.outputSchema || null,
+      inputMapping: inputMappings.length > 0 ? inputMappings : null,
+      outputMapping: outputMappings.length > 0 ? outputMappings : null,
       apiPath: formData.apiPath,
       apiKey: formData.apiKey,
       isActive: formData.isActive,
@@ -155,15 +260,53 @@ export default function NewRFCTemplatePage() {
 
                 <div className="space-y-2">
                   <Label htmlFor="rfmName">RFC Function Name *</Label>
-                  <Input
-                    id="rfmName"
-                    value={formData.rfmName}
-                    onChange={(e) => setFormData({ ...formData, rfmName: e.target.value.toUpperCase() })}
-                    placeholder="e.g., BAPI_CUSTOMER_GETDETAIL"
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="rfmName"
+                      value={formData.rfmName}
+                      onChange={(e) => setFormData({ ...formData, rfmName: e.target.value.toUpperCase() })}
+                      placeholder="e.g., BAPI_CUSTOMER_GETDETAIL"
+                      required
+                    />
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={fetchMetadata}
+                      disabled={loadingMetadata || !formData.connectionId || !formData.rfmName}
+                    >
+                      {loadingMetadata ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Click the search icon to fetch parameter structure from SAP
+                  </p>
                 </div>
               </div>
+
+              {metadata && (
+                <Card className="bg-muted/50">
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <FileJson className="h-4 w-4" />
+                      RFC Metadata
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label className="text-xs">Input Parameters</Label>
+                      <pre className="mt-1 text-xs bg-background p-2 rounded border overflow-auto max-h-40">
+                        {JSON.stringify(metadata.inputSchema, null, 2)}
+                      </pre>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Output Parameters</Label>
+                      <pre className="mt-1 text-xs bg-background p-2 rounded border overflow-auto max-h-40">
+                        {JSON.stringify(metadata.outputSchema, null, 2)}
+                      </pre>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="parameters">Default Parameters (JSON)</Label>
@@ -175,10 +318,55 @@ export default function NewRFCTemplatePage() {
                   rows={6}
                   className="font-mono text-sm"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Default parameters for this RFC. Can be overridden when calling the API.
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Default parameters for this RFC. Can be overridden when calling the API.
+                  </p>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={testRFC}
+                    disabled={testing || !formData.connectionId || !formData.rfmName}
+                  >
+                    {testing ? (
+                      <>
+                        <RefreshCw className="mr-2 h-3 w-3 animate-spin" />
+                        Testing...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2 h-3 w-3" />
+                        Test Execute
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
+
+              {testResult && (
+                <Card className="bg-muted/50 border-green-200">
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <Play className="h-4 w-4 text-green-600" />
+                        Test Result
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {testResult.duration}ms
+                      </span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div>
+                      <Label className="text-xs">Response</Label>
+                      <pre className="mt-1 text-xs bg-background p-2 rounded border overflow-auto max-h-60">
+                        {JSON.stringify(testResult.result, null, 2)}
+                      </pre>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="apiPath">API Path *</Label>
@@ -229,6 +417,74 @@ export default function NewRFCTemplatePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* JSON Mapping Section */}
+          {metadata && (
+            <Card>
+              <CardHeader>
+                <CardTitle>JSON Field Mapping (Optional)</CardTitle>
+                <CardDescription>
+                  Define how external API fields map to RFC parameters. Leave empty to use direct passthrough.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Tabs defaultValue="input" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="input">Input Mapping</TabsTrigger>
+                    <TabsTrigger value="output">Output Mapping</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="input" className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>API Input Example (JSON)</Label>
+                      <Textarea
+                        value={apiInputExample}
+                        onChange={(e) => setApiInputExample(e.target.value)}
+                        placeholder='{"customerId": "100001"}'
+                        rows={4}
+                        className="font-mono text-xs"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Define what format external systems will send
+                      </p>
+                    </div>
+                    
+                    <JSONMapper
+                      direction="input"
+                      apiSchema={JSON.parse(apiInputExample || '{}')}
+                      rfcSchema={metadata.inputSchema}
+                      mappings={inputMappings}
+                      onChange={setInputMappings}
+                    />
+                  </TabsContent>
+                  
+                  <TabsContent value="output" className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>API Output Example (JSON)</Label>
+                      <Textarea
+                        value={apiOutputExample}
+                        onChange={(e) => setApiOutputExample(e.target.value)}
+                        placeholder='{"customer": {...}}'
+                        rows={4}
+                        className="font-mono text-xs"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Define what format to return to external systems
+                      </p>
+                    </div>
+                    
+                    <JSONMapper
+                      direction="output"
+                      apiSchema={testResult?.result || metadata.outputSchema}
+                      rfcSchema={JSON.parse(apiOutputExample || '{}')}
+                      mappings={outputMappings}
+                      onChange={setOutputMappings}
+                    />
+                  </TabsContent>
+                </Tabs>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="flex gap-4 mt-6">
             <Button type="submit" disabled={loading}>
