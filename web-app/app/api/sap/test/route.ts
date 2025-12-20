@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { testConnection } from '@/lib/sap-client';
+import { testRFCConnection } from '@/lib/rfc-api-client';
 
 export async function POST(request: Request) {
   try {
@@ -37,17 +37,34 @@ export async function POST(request: Request) {
       );
     }
 
-    // Test the connection
+    // Test the connection via RFC API Server
     const startTime = Date.now();
-    const isAlive = await testConnection(connection as any);
+    const result = await testRFCConnection({
+      ashost: connection.host,
+      sysnr: connection.systemNumber,
+      client: connection.client,
+      user: connection.user,
+      passwd: connection.password,
+      lang: connection.language,
+    });
     const duration = Date.now() - startTime;
+
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error || 'Connection test failed',
+        },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
       data: {
-        alive: isAlive,
+        alive: result.success,
         duration,
-        message: isAlive ? 'Connection successful' : 'Connection failed'
+        message: result.success ? 'Connection successful' : 'Connection failed'
       }
     });
   } catch (error: any) {
@@ -56,11 +73,6 @@ export async function POST(request: Request) {
       {
         success: false,
         error: error.message || 'Connection test failed',
-        details: {
-          code: error.code,
-          key: error.key,
-          message: error.message
-        }
       },
       { status: 500 }
     );
