@@ -16,9 +16,10 @@ RUN apt-get update && apt-get install -y \
 # ============================================
 COPY nwrfcsdk /usr/local/sap/nwrfcsdk
 
-# 设置 SAP SDK 环境变量
+# 设置 SAP SDK 环境变量（必须在 npm install 之前设置）
 ENV SAPNWRFC_HOME=/usr/local/sap/nwrfcsdk
 ENV LD_LIBRARY_PATH=/usr/local/sap/nwrfcsdk/lib
+ENV LIBRARY_PATH=/usr/local/sap/nwrfcsdk/lib
 ENV NODE_ENV=production
 
 # ============================================
@@ -32,14 +33,8 @@ COPY binding.gyp ./
 COPY tsconfig.json* ./
 COPY src ./src
 
-# 安装依赖
+# 安装依赖（会触发 C++ 编译）
 RUN npm install
-
-# 编译 TypeScript 生成 lib/ 目录
-RUN npm run ts
-
-# 构建 C++ 绑定
-RUN npm run cpp || node-gyp rebuild
 
 # 复制 web-app
 COPY web-app ./web-app
