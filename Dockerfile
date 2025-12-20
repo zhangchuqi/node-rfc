@@ -31,10 +31,15 @@ COPY package*.json ./
 COPY binding.gyp ./
 COPY tsconfig.json* ./
 COPY src ./src
-COPY lib ./lib
 
-# 安装依赖并构建（会编译 TypeScript 和 C++ 绑定）
-RUN npm install --build-from-source
+# 安装依赖
+RUN npm install
+
+# 编译 TypeScript 生成 lib/ 目录
+RUN npm run ts
+
+# 构建 C++ 绑定
+RUN npm run cpp || node-gyp rebuild
 
 # 复制 web-app
 COPY web-app ./web-app
