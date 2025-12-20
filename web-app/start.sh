@@ -42,5 +42,5 @@ async function createAdminIfNotExists() {
 createAdminIfNotExists().catch(console.error);
 "
 
-echo "Starting application..."
-npm start
+echo "Starting application on port ${PORT:-3000}..."
+npm start -- -p ${PORT:-3000}
