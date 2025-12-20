@@ -16,6 +16,11 @@ RUN apt-get update && apt-get install -y \
 # ============================================
 COPY nwrfcsdk /usr/local/sap/nwrfcsdk
 
+# 验证 SDK 文件已复制
+RUN echo "Checking SAP SDK files..." && \
+    ls -la /usr/local/sap/nwrfcsdk/lib/ && \
+    file /usr/local/sap/nwrfcsdk/lib/libsapnwrfc.so
+
 # 设置 SAP SDK 环境变量（必须在 npm install 之前设置）
 ENV SAPNWRFC_HOME=/usr/local/sap/nwrfcsdk
 ENV LD_LIBRARY_PATH=/usr/local/sap/nwrfcsdk/lib
@@ -34,7 +39,10 @@ COPY tsconfig.json* ./
 COPY src ./src
 
 # 安装依赖（会触发 C++ 编译）
-RUN npm install
+# 使用 verbose 模式查看详细信息
+RUN echo "SAPNWRFC_HOME=$SAPNWRFC_HOME" && \
+    echo "LIBRARY_PATH=$LIBRARY_PATH" && \
+    npm install --verbose 2>&1 | tail -100
 
 # 复制 web-app
 COPY web-app ./web-app
