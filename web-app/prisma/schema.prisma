@@ -13,7 +13,8 @@ datasource db {
 // User Authentication
 model User {
   id            String    @id @default(uuid())
-  email         String    @unique
+  username      String    @unique
+  email         String?   @unique
   name          String?
   password      String    // hashed password
   role          UserRole  @default(USER)
