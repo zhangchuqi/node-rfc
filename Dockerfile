@@ -61,8 +61,8 @@ COPY web-app ./
 # 生成 Prisma 客户端
 RUN npx prisma generate
 
-# 构建 Next.js（确保 TypeScript 可用）
-RUN npx tsc --version && npm run build
+# 构建 Next.js
+RUN npm run build
 
 # 清理 devDependencies 以减小镜像大小
 RUN npm prune --production

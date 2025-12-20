@@ -204,17 +204,20 @@ export default function NewRFCTemplatePage() {
 
   return (
     <div className="min-h-screen p-8">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl font-bold mb-2">New RFC Template</h1>
         <p className="text-muted-foreground mb-8">Create a predefined RFC call configuration</p>
 
         <form onSubmit={handleSubmit}>
-          <Card>
-            <CardHeader>
-              <CardTitle>Template Configuration</CardTitle>
-              <CardDescription>Configure the RFC template details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 左侧：表单配置 */}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Template Configuration</CardTitle>
+                  <CardDescription>Configure the RFC template details</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Template Name *</Label>
                 <Input
@@ -418,7 +421,20 @@ export default function NewRFCTemplatePage() {
             </CardContent>
           </Card>
 
-          {/* JSON Mapping Section */}
+          <div className="flex gap-4">
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Creating...' : 'Create Template'}
+            </Button>
+            <Link href="/rfc-templates">
+              <Button type="button" variant="outline">
+                Cancel
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* 右侧：JSON Mapping */}
+        <div className="space-y-6">
           {metadata && (
             <Card>
               <CardHeader>
@@ -485,17 +501,8 @@ export default function NewRFCTemplatePage() {
               </CardContent>
             </Card>
           )}
-
-          <div className="flex gap-4 mt-6">
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Template'}
-            </Button>
-            <Link href="/rfc-templates">
-              <Button type="button" variant="outline">
-                Cancel
-              </Button>
-            </Link>
-          </div>
+        </div>
+      </div>
         </form>
       </div>
     </div>
