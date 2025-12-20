@@ -28,7 +28,6 @@ COPY package*.json ./
 COPY binding.gyp ./
 COPY tsconfig.json ./
 COPY src ./src
-COPY lib ./lib
 
 # 安装依赖并构建 node-rfc
 RUN npm install
