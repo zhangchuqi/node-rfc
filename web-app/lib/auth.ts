@@ -60,25 +60,6 @@ export const authConfig: NextAuthConfig = {
       }
       return session;
     },
-    authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user;
-      const isAuthPage = nextUrl.pathname.startsWith('/auth');
-      
-      console.log('Auth callback:', { 
-        path: nextUrl.pathname, 
-        isLoggedIn, 
-        isAuthPage 
-      });
-
-      // 如果在认证页面
-      if (isAuthPage) {
-        if (isLoggedIn) return false; // 重定向到主页
-        return true; // 允许访问登录页
-      }
-
-      // 如果不在认证页面，必须登录
-      return isLoggedIn;
-    },
   },
   session: {
     strategy: 'jwt',
