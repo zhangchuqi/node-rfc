@@ -14,6 +14,10 @@ RUN apt-get update && apt-get install -y \
 # ============================================
 # 安装 SAP NW RFC SDK
 # ============================================
+# 先检查构建上下文
+RUN echo "Checking build context..." && pwd && ls -la
+
+# 复制 SDK
 COPY nwrfcsdk /usr/local/sap/nwrfcsdk
 
 # 验证 SDK 文件已复制
