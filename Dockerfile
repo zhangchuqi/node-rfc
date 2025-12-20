@@ -14,16 +14,7 @@ RUN apt-get update && apt-get install -y \
 # ============================================
 # 安装 SAP NW RFC SDK
 # ============================================
-# 先检查构建上下文
-RUN echo "Checking build context..." && pwd && ls -la
-
-# 复制 SDK
 COPY nwrfcsdk /usr/local/sap/nwrfcsdk
-
-# 验证 SDK 文件已复制
-RUN echo "Checking SAP SDK files..." && \
-    ls -la /usr/local/sap/nwrfcsdk/lib/ && \
-    file /usr/local/sap/nwrfcsdk/lib/libsapnwrfc.so
 
 # 设置 SAP SDK 环境变量（必须在 npm install 之前设置）
 ENV SAPNWRFC_HOME=/usr/local/sap/nwrfcsdk
@@ -32,31 +23,29 @@ ENV LIBRARY_PATH=/usr/local/sap/nwrfcsdk/lib
 ENV NODE_ENV=production
 
 # ============================================
-# 构建完整项目
+# 构建 node-rfc（根目录项目）
 # ============================================
 WORKDIR /app
 
-# 先复制根目录的 node-rfc 项目文件
+# 复制根目录项目文件
 COPY package*.json ./
 COPY binding.gyp ./
-COPY tsconfig.json* ./
+COPY tsconfig.json ./
 COPY src ./src
 
-# 安装依赖（会触发 C++ 编译）
-# 使用 verbose 模式查看详细信息
-RUN echo "SAPNWRFC_HOME=$SAPNWRFC_HOME" && \
-    echo "LIBRARY_PATH=$LIBRARY_PATH" && \
-    npm install --verbose 2>&1 | tail -100
+# 安装依赖并构建 C++ 扩展
+RUN npm install --verbose
 
-# 复制 web-app
+# ============================================
+# 构建 web-app
+# ============================================
 WORKDIR /app/web-app
 
-# 复制 web-app 源代码（.dockerignore 会排除 node_modules 和 .next）
+# 复制 web-app 所有文件（.dockerignore 排除 node_modules）
 COPY web-app/ ./
 
-# 安装 web-app 依赖（包括 devDependencies，build 需要 TypeScript）
-# 在 COPY 之后安装，确保 package-lock.json 和 node_modules 同步
-RUN npm ci || npm install
+# 安装 web-app 依赖（包括 TypeScript）
+RUN npm install
 
 # 生成 Prisma 客户端
 RUN npx prisma generate
@@ -64,7 +53,7 @@ RUN npx prisma generate
 # 构建 Next.js
 RUN npm run build
 
-# 清理 devDependencies 以减小镜像大小
+# 清理 devDependencies
 RUN npm prune --production
 
 EXPOSE 3000
