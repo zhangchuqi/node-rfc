@@ -60,13 +60,12 @@ COPY web-app/app ./app
 COPY web-app/components ./components
 COPY web-app/lib ./lib
 COPY web-app/prisma ./prisma
-COPY web-app/public ./public
 COPY web-app/scripts ./scripts
 COPY web-app/*.ts ./
 COPY web-app/*.js ./
 COPY web-app/*.mjs ./
 COPY web-app/*.json ./
-COPY web-app/.env.example ./ 
+COPY web-app/middleware.ts ./
 
 # 生成 Prisma 客户端
 RUN npx prisma generate
