@@ -26,13 +26,14 @@ ENV NODE_ENV=production
 # ============================================
 WORKDIR /app
 
-# 先复制根目录的 node-rfc 依赖
+# 先复制根目录的 node-rfc 项目文件
 COPY package*.json ./
 COPY binding.gyp ./
+COPY tsconfig.json* ./
 COPY src ./src
 COPY lib ./lib
 
-# 构建 node-rfc（强制从源码构建）
+# 安装依赖并构建（会编译 TypeScript 和 C++ 绑定）
 RUN npm install --build-from-source
 
 # 复制 web-app
