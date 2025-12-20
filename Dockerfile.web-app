@@ -32,6 +32,10 @@ RUN npx prisma generate
 COPY web-app/app ./app/
 COPY web-app/components ./components/
 COPY web-app/lib ./lib/
+COPY web-app/start.sh ./start.sh
+
+# 给启动脚本执行权限
+RUN chmod +x start.sh
 
 # 构建 Next.js
 RUN npm run build
@@ -40,10 +44,7 @@ RUN npm run build
 ENV NODE_ENV=production
 ENV MOCK_MODE=true
 
-# 清理 devDependencies
-RUN npm prune --production
-
 EXPOSE 3000
 
-# 启动命令
-CMD npx prisma migrate deploy && npm start
+# 启动命令：运行迁移、创建用户、启动应用
+CMD ["./start.sh"]
