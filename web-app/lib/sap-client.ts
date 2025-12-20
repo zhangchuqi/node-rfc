@@ -68,7 +68,8 @@ export async function getSAPConnection(connection: SAPConnection): Promise<any> 
 export async function callRFC(
   connection: SAPConnection,
   functionName: string,
-  parameters: Record<string, any> = {}
+  parameters: Record<string, any> = {},
+  options?: any
 ): Promise<any> {
   throw new Error(
     'callRFC is not available in production. ' +

@@ -41,16 +41,8 @@ export async function POST(request: Request) {
     try {
       let metadata;
       
-      // 本地开发：直接调用 RFC
-      if (callRFCLocal && process.env.NODE_ENV === 'development') {
-        metadata = await callRFCLocal(
-          connection,
-          'RFC_GET_FUNCTION_INTERFACE',
-          { FUNCNAME: rfmName.toUpperCase() }
-        );
-      } 
-      // 生产环境：通过 HTTP 调用 RFC API Server
-      else if (process.env.RFC_API_URL) {
+      // 优先：如果设置了 RFC_API_URL，通过 HTTP 调用 RFC API Server
+      if (process.env.RFC_API_URL) {
         const sapParams = toSAPParams(connection);
         const response = await callRFCHttp({
           connection: sapParams,
@@ -63,12 +55,20 @@ export async function POST(request: Request) {
         }
         metadata = response.data;
       }
-      // 既没有本地 RFC 也没有 RFC API Server
+      // 回退：本地开发直接调用 RFC（需要安装 node-rfc）
+      else if (callRFCLocal && process.env.NODE_ENV === 'development') {
+        metadata = await callRFCLocal(
+          connection,
+          'RFC_GET_FUNCTION_INTERFACE',
+          { FUNCNAME: rfmName.toUpperCase() }
+        );
+      } 
+      // 既没有 RFC_API_URL 也没有本地 RFC
       else {
         return NextResponse.json(
           { 
             success: false, 
-            error: 'RFC not available. Set RFC_API_URL environment variable to use RFC API Server.',
+            error: 'RFC not available. Set RFC_API_URL environment variable to use RFC API Server, or run in development mode with node-rfc installed.',
           },
           { status: 503 }
         );
