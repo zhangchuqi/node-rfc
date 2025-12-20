@@ -1,8 +1,14 @@
-import { Client, Pool } from 'node-rfc';
-import { SAPConnection, ConnectionType } from '@prisma/client';
+/**
+ * SAP Client - Conditional Import
+ * 
+ * In production (Railway), this module should NOT be used directly.
+ * Instead, use rfc-api-client.ts to call the RFC API Server via HTTP.
+ * 
+ * This file is only for local development with direct SAP SDK access.
+ */
 
-// Cache for active connections
-const connectionCache = new Map<string, Client | Pool>();
+// Type-only imports to avoid runtime dependency
+import type { SAPConnection } from '@prisma/client';
 
 export interface SAPConnectionParams {
   user: string;
@@ -44,187 +50,36 @@ export function toSAPParams(connection: SAPConnection): SAPConnectionParams {
 }
 
 /**
- * Get or create a SAP client/pool connection
+ * DEPRECATED in production: Use RFC API Client instead
+ * 
+ * This function is only available in local development environments
+ * where node-rfc is installed.
  */
-export async function getSAPConnection(connection: SAPConnection): Promise<Client | Pool> {
-  const cacheKey = connection.id;
-
-  // Return cached connection if exists
-  if (connectionCache.has(cacheKey)) {
-    const cached = connectionCache.get(cacheKey)!;
-    
-    // Check if connection is still alive
-    if (cached instanceof Client && cached.alive) {
-      return cached;
-    }
-    if (cached instanceof Pool) {
-      return cached;
-    }
-    
-    // Remove stale connection from cache
-    connectionCache.delete(cacheKey);
-  }
-
-  // Create new connection based on type
-  const params = toSAPParams(connection);
-  const clientOptions = (connection.clientOptions as any) || {};
-
-  if (connection.connectionType === ConnectionType.POOL) {
-    const poolOptions = (connection.poolOptions as any) || { low: 2, high: 10 };
-    
-    const pool = new Pool({
-      connectionParameters: params,
-      clientOptions,
-      poolOptions,
-    });
-
-    connectionCache.set(cacheKey, pool);
-    return pool;
-  } else {
-    // CLIENT type
-    const client = new Client(params, clientOptions);
-    connectionCache.set(cacheKey, client);
-    return client;
-  }
+export async function getSAPConnection(connection: SAPConnection): Promise<any> {
+  throw new Error(
+    'getSAPConnection is not available in production. ' +
+    'Use RFC API Client (rfc-api-client.ts) to call RFC API Server via HTTP.'
+  );
 }
 
 /**
- * Close and remove a connection from cache
- */
-export async function closeSAPConnection(connectionId: string): Promise<void> {
-  const cached = connectionCache.get(connectionId);
-  if (!cached) return;
-
-  try {
-    if (cached instanceof Client) {
-      if (cached.alive) {
-        await cached.close();
-      }
-    } else if (cached instanceof Pool) {
-      await cached.closeAll();
-    }
-  } catch (error) {
-    console.error('Error closing connection:', error);
-  } finally {
-    connectionCache.delete(connectionId);
-  }
-}
-
-/**
- * Close all cached connections
- */
-export async function closeAllConnections(): Promise<void> {
-  const promises = Array.from(connectionCache.keys()).map(closeSAPConnection);
-  await Promise.all(promises);
-}
-
-/**
- * Get RFC function metadata (parameters structure)
- */
-export async function getFunctionMetadata(
-  connection: SAPConnection,
-  rfmName: string
-): Promise<any> {
-  const sapConnection = await getSAPConnection(connection);
-
-  if (sapConnection instanceof Client) {
-    // Direct client - need to open/close
-    if (!sapConnection.alive) {
-      await sapConnection.open();
-    }
-    // Use the client's metadata method
-    const metadata = (sapConnection as any).connectionInfo;
-    
-    // Call RFC_METADATA to get function description
-    const result = await sapConnection.call('RFC_METADATA_GET', {
-      FUNCTION_NAME: rfmName
-    });
-    return result;
-  } else {
-    // Pool - acquire, call, release
-    return new Promise((resolve, reject) => {
-      sapConnection.acquire((err: Error | null, client: Client) => {
-        if (err || !client) {
-          reject(err || new Error('Failed to acquire client'));
-          return;
-        }
-        client.call('RFC_METADATA_GET', { FUNCTION_NAME: rfmName })
-          .then((result: any) => {
-            sapConnection.release(client, (releaseErr: Error | null) => {
-              if (releaseErr) console.error('Error releasing client:', releaseErr);
-              resolve(result);
-            });
-          })
-          .catch((callErr: any) => {
-            sapConnection.release(client, (releaseErr: Error | null) => {
-              if (releaseErr) console.error('Error releasing client:', releaseErr);
-              reject(callErr);
-            });
-          });
-      });
-    });
-  }
-}
-
-/**
- * Call a SAP function module
+ * DEPRECATED in production: Use RFC API Client instead
  */
 export async function callRFC(
   connection: SAPConnection,
-  rfmName: string,
-  parameters: Record<string, any> = {},
-  callOptions?: { timeout?: number; notRequested?: string[] }
+  functionName: string,
+  parameters: Record<string, any> = {}
 ): Promise<any> {
-  const sapConnection = await getSAPConnection(connection);
-
-  if (sapConnection instanceof Client) {
-    // Direct client - need to open/close
-    if (!sapConnection.alive) {
-      await sapConnection.open();
-    }
-    const result = await sapConnection.call(rfmName, parameters, callOptions);
-    return result;
-  } else {
-    // Pool - acquire, call, release
-    return new Promise((resolve, reject) => {
-      sapConnection.acquire((err: Error | null, client: Client) => {
-        if (err || !client) {
-          reject(err || new Error('Failed to acquire client'));
-          return;
-        }
-        client.call(rfmName, parameters, callOptions)
-          .then((result: any) => {
-            sapConnection.release(client, (releaseErr: Error | null) => {
-              if (releaseErr) console.error('Error releasing client:', releaseErr);
-              resolve(result);
-            });
-          })
-          .catch((callErr: any) => {
-            sapConnection.release(client, (releaseErr: Error | null) => {
-              if (releaseErr) console.error('Error releasing client:', releaseErr);
-              reject(callErr);
-            });
-          });
-      });
-    });
-  }
+  throw new Error(
+    'callRFC is not available in production. ' +
+    'Use RFC API Client (rfc-api-client.ts) to call RFC API Server via HTTP.'
+  );
 }
 
 /**
- * Test a connection (without caching)
+ * DEPRECATED in production: Use RFC API Client instead
  */
-export async function testConnection(connection: SAPConnection): Promise<boolean> {
-  const params = toSAPParams(connection);
-  const clientOptions = (connection.clientOptions as any) || {};
-  
-  const client = new Client(params, clientOptions);
-  
-  try {
-    await client.open();
-    await client.ping();
-    await client.close();
-    return true;
-  } catch (error) {
-    throw error;
-  }
+export async function closeAllConnections(): Promise<void> {
+  // No-op in production
+  console.log('closeAllConnections: No active connections in production mode');
 }
