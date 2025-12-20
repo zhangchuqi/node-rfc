@@ -19,16 +19,56 @@ doc/_build/
 release/
 issues/
 examples/dist/
+
+# IDE specific
 # https://github.com/Microsoft/vscode-cpptools/issues/3347
 .vscode/ipch
-prebuilds/
+
+# Prebuilt binaries (keep these for distribution)
+# prebuilds/
+
+# Compiled output
 /lib/
+
+# Build files
 Makefile
 cmake_install.cmake
 CMakeCache.txt
 CMakeFiles
 ci/test
 ci/test/
+
+# Configuration files (sensitive)
 sapnwrfc.ini
 tmp
 
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Auto-generated documentation
+docs/api/typescript/
+docs/api/cpp/
+
+# OS specific
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.bak
+*.backup
+*.old
+*.orig
+~*

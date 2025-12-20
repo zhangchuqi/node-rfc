@@ -1,0 +1,51 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src/ts"],
+  "entryPointStrategy": "expand",
+  "out": "docs/api/typescript",
+  "exclude": [
+    "**/*.spec.ts",
+    "**/node_modules/**"
+  ],
+  "plugin": [],
+  "name": "node-rfc API Documentation",
+  "includeVersion": true,
+  "readme": "README.md",
+  "theme": "default",
+  "navigationLinks": {
+    "GitHub": "https://github.com/SAP/node-rfc",
+    "npm": "https://www.npmjs.com/package/node-rfc"
+  },
+  "categorizeByGroup": true,
+  "groupOrder": [
+    "Classes",
+    "Interfaces",
+    "Type Aliases",
+    "Functions",
+    "*"
+  ],
+  "sort": ["source-order"],
+  "excludePrivate": false,
+  "excludeProtected": false,
+  "excludeInternal": true,
+  "visibilityFilters": {
+    "protected": true,
+    "private": true,
+    "inherited": true,
+    "external": false
+  },
+  "searchInComments": true,
+  "cleanOutputDir": true,
+  "githubPages": false,
+  "hideGenerator": false,
+  "disableSources": false,
+  "includeHierarchySummary": true,
+  "basePath": ".",
+  "treatWarningsAsErrors": false,
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": false
+  },
+  "commentStyle": "jsdoc"
+}

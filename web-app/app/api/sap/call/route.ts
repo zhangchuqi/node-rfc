@@ -1,7 +1,38 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { callRFC } from '@/lib/sap-client';
+import { callRFC as callRFCDirect, toSAPParams } from '@/lib/sap-client';
+import { callRFC as callRFCViaAPI } from '@/lib/rfc-api-client';
 import { CallStatus } from '@prisma/client';
+import type { SAPConnection } from '@prisma/client';
+
+// Helper: 统一 RFC 调用接口
+async function executeRFC(
+  connection: SAPConnection,
+  rfmName: string,
+  parameters: Record<string, any>,
+  callOptions?: any
+): Promise<any> {
+  const useAPIClient = process.env.RFC_API_URL;
+  
+  if (useAPIClient) {
+    // 使用 HTTP API 调用 rfc-server
+    const sapParams = toSAPParams(connection);
+    const response = await callRFCViaAPI({
+      connection: sapParams,
+      rfmName,
+      parameters
+    });
+    
+    if (!response.success) {
+      throw new Error(response.error || 'RFC call failed');
+    }
+    
+    return response.data;
+  } else {
+    // 本地直接调用（开发环境）
+    return await callRFCDirect(connection, rfmName, parameters, callOptions);
+  }
+}
 
 // Helper function to remove empty string values from parameters
 function cleanParameters(params: any): any {
@@ -82,7 +113,7 @@ export async function POST(request: Request) {
     try {
       // Clean parameters: remove empty strings so SAP uses default values
       const cleanedParameters = cleanParameters(parameters || {});
-      result = await callRFC(connection, rfmName, cleanedParameters, callOptions);
+      result = await executeRFC(connection, rfmName, cleanedParameters, callOptions);
     } catch (error: any) {
       status = CallStatus.ERROR;
       errorMessage = error.message || 'Unknown error';

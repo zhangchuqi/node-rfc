@@ -8,6 +8,19 @@ import {
     NodeRfcEnvironment,
 } from "./noderfc-bindings";
 import { Client } from "./sapnwrfc-client";
+
+/**
+ * Throughput statistics for RFC connections.
+ *
+ * @interface RfcThroughputStatus
+ * @property {number} numberOfCalls - Total number of RFC calls made
+ * @property {number} sentBytes - Total bytes sent to SAP system
+ * @property {number} receivedBytes - Total bytes received from SAP system
+ * @property {number} applicationTime - Time spent in application processing (microseconds)
+ * @property {number} totalTime - Total time for all operations (microseconds)
+ * @property {number} serializationTime - Time spent serializing data (microseconds)
+ * @property {number} deserializationTime - Time spent deserializing data (microseconds)
+ */
 export interface RfcThroughputBinding {
     /* eslint-disable @typescript-eslint/no-misused-new */
     new (): RfcThroughputBinding;
@@ -32,6 +45,52 @@ export interface RfcThroughputStatus {
     deserializationTime: number;
 }
 
+/**
+ * RFC Throughput monitoring for tracking connection performance metrics.
+ *
+ * The Throughput class provides detailed statistics about RFC connection usage,
+ * including call counts, data transfer volumes, and timing information. It can be
+ * attached to one or more client connections for monitoring and profiling.
+ *
+ * @class Throughput
+ *
+ * @example
+ * // Basic throughput monitoring
+ * const client = new Client(connectionParams);
+ * await client.open();
+ *
+ * const throughput = new Throughput(client);
+ * await client.call('STFC_CONNECTION', { REQUTEXT: 'Hello' });
+ * await client.call('BAPI_USER_GET_DETAIL', { USERNAME: 'DEMO' });
+ *
+ * console.log('Statistics:', throughput.status);
+ * // Output: { numberOfCalls: 2, sentBytes: 1234, receivedBytes: 5678, ... }
+ *
+ * @example
+ * // Monitor multiple clients
+ * const clients = await pool.acquire(3);
+ * const throughput = new Throughput(clients);
+ *
+ * // Make calls with all clients...
+ * await Promise.all(clients.map(c => c.call('RFC_FUNC', params)));
+ *
+ * console.log(`Total calls: ${throughput.status.numberOfCalls}`);
+ * console.log(`Data sent: ${throughput.status.sentBytes} bytes`);
+ * console.log(`Data received: ${throughput.status.receivedBytes} bytes`);
+ *
+ * @example
+ * // Reset and track new session
+ * throughput.reset();
+ * await client.call('EXPENSIVE_FUNCTION', params);
+ * console.log('Function timing:', throughput.status.totalTime, 'μs');
+ *
+ * @example
+ * // Check which throughput monitor is attached to a client
+ * const monitor = Throughput.getFromConnection(client);
+ * if (monitor) {
+ *   console.log('Active monitor:', monitor.status);
+ * }
+ */
 export class Throughput {
     private __throughput: RfcThroughputBinding;
     private __clients: Set<Client> = new Set();

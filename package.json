@@ -45,7 +45,11 @@
     "dev": "prebuildify --napi -t 18.18.2 --force --strip --verbose",
     "ts": "tsc",
     "build": "npm run ts && npm run cpp",
-    "rebuild": "npm install --build-from-source"
+    "rebuild": "npm install --build-from-source",
+    "docs": "npm run docs:ts && npm run docs:cpp",
+    "docs:ts": "typedoc",
+    "docs:cpp": "doxygen Doxyfile",
+    "docs:clean": "rm -rf docs/api/typescript docs/api/cpp"
   },
   "config": {
     "commitizen": {

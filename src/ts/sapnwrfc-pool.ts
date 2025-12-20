@@ -17,17 +17,46 @@ import { Client, RfcClientBinding, RfcClientOptions } from "./sapnwrfc-client";
 // RfcPool
 //
 
+/**
+ * Configuration options for the RFC connection pool.
+ *
+ * @interface RfcPoolOptions
+ * @property {number} low - Minimum number of connections to maintain in the pool
+ * @property {number} high - Maximum number of connections allowed in the pool
+ * @property {RfcLoggingLevel} [logLevel] - Logging verbosity level
+ *
+ * @example
+ * const poolOptions = {
+ *   low: 2,  // Keep at least 2 connections ready
+ *   high: 10 // Allow up to 10 concurrent connections
+ * };
+ */
 export interface RfcPoolOptions {
     low: number;
     high: number;
     logLevel?: RfcLoggingLevel;
 }
 
+/**
+ * Current status of the connection pool.
+ *
+ * @interface RfcPoolStatus
+ * @property {number} ready - Number of connections available for use
+ * @property {number} leased - Number of connections currently in use
+ */
 export interface RfcPoolStatus {
     ready: number;
     leased: number;
 }
 
+/**
+ * Complete configuration for RFC connection pool initialization.
+ *
+ * @interface RfcPoolConfiguration
+ * @property {RfcConnectionParameters} connectionParameters - SAP system connection details
+ * @property {RfcClientOptions} [clientOptions] - Optional client behavior configuration
+ * @property {RfcPoolOptions} [poolOptions] - Optional pool sizing configuration (default: low=2, high=4)
+ */
 export interface RfcPoolConfiguration {
     connectionParameters: RfcConnectionParameters;
     clientOptions?: RfcClientOptions;
@@ -55,6 +84,52 @@ export interface RfcPoolBinding {
     _id: number;
     _status: RfcPoolStatus;
 }
+
+/**
+ * RFC Connection Pool for efficient connection management.
+ *
+ * The Pool class manages a pool of RFC connections to an SAP system, reusing connections
+ * to improve performance and reduce connection overhead. It maintains a configurable
+ * number of ready connections and can dynamically create new connections up to a maximum limit.
+ *
+ * @class Pool
+ *
+ * @example
+ * // Create a connection pool
+ * const pool = new Pool({
+ *   connectionParameters: {
+ *     ashost: '10.68.110.51',
+ *     sysnr: '00',
+ *     user: 'demo',
+ *     passwd: 'welcome',
+ *     client: '620',
+ *     lang: 'EN'
+ *   },
+ *   clientOptions: {
+ *     stateless: false
+ *   },
+ *   poolOptions: {
+ *     low: 2,   // Maintain 2 connections
+ *     high: 10  // Allow up to 10 connections
+ *   }
+ * });
+ *
+ * @example
+ * // Acquire and release connections
+ * const client = await pool.acquire();
+ * try {
+ *   const result = await client.call('RFC_FUNCTION', params);
+ *   console.log(result);
+ * } finally {
+ *   await pool.release(client); // Always release back to pool
+ * }
+ *
+ * @example
+ * // Acquire multiple clients
+ * const clients = await pool.acquire(3);
+ * // Use clients...
+ * await pool.release(clients);
+ */
 export class Pool {
     private __connectionParams: RfcConnectionParameters;
     private __clientOptions?: RfcClientOptions;
@@ -62,6 +137,29 @@ export class Pool {
 
     private __pool: RfcPoolBinding;
 
+    /**
+     * Creates a new RFC connection pool.
+     *
+     * @constructor
+     * @param {RfcPoolConfiguration} poolConfiguration - Pool configuration including connection
+     *   parameters, client options, and pool sizing
+     *
+     * @example
+     * const pool = new Pool({
+     *   connectionParameters: {
+     *     ashost: 'server.example.com',
+     *     sysnr: '00',
+     *     user: 'USERNAME',
+     *     passwd: 'PASSWORD',
+     *     client: '100',
+     *     lang: 'EN'
+     *   },
+     *   poolOptions: {
+     *     low: 4,
+     *     high: 20
+     *   }
+     * });
+     */
     constructor(poolConfiguration: RfcPoolConfiguration) {
         this.__connectionParams = poolConfiguration.connectionParameters;
         this.__clientOptions = poolConfiguration.clientOptions;
@@ -72,6 +170,46 @@ export class Pool {
         this.__pool = new noderfc_binding.Pool(poolConfiguration);
     }
 
+    /**
+     * Acquires one or more RFC client connections from the pool.
+     *
+     * Obtains client(s) from the pool for making RFC calls. If no connections are
+     * immediately available, new connections will be created up to the pool's high limit.
+     * The method supports both callback and promise-based usage patterns with flexible
+     * argument ordering.
+     *
+     * @param {number | Function} [arg1] - Number of clients to acquire (default: 1) or callback
+     * @param {Function | number} [arg2] - Callback or number of clients (depends on arg1 type)
+     * @returns {void | Promise<Client | Client[]>} Returns promise resolving to Client or Client[]
+     *   if no callback, otherwise void. Promise rejects on error.
+     * @throws {TypeError} If arguments are invalid types
+     * @throws {Error} If pool has reached maximum capacity
+     *
+     * @example
+     * // Promise style - single client
+     * const client = await pool.acquire();
+     * await client.call('RFC_FUNCTION', params);
+     * await pool.release(client);
+     *
+     * @example
+     * // Promise style - multiple clients
+     * const clients = await pool.acquire(3);
+     * await Promise.all(clients.map(c => c.call('RFC_FUNCTION', params)));
+     * await pool.release(clients);
+     *
+     * @example
+     * // Callback style
+     * pool.acquire(2, (err, clients) => {
+     *   if (err) return console.error(err);
+     *   // Use clients...
+     *   pool.release(clients);
+     * });
+     *
+     * @example
+     * // Flexible argument order
+     * pool.acquire((err, client) => { }); // Single client with callback
+     * pool.acquire(5, (err, clients) => { }); // 5 clients with callback
+     */
     acquire(
         arg1?: number | Function,
         arg2?: number | Function

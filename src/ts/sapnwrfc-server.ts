@@ -20,6 +20,20 @@ import {
 // RfcServer
 //
 
+/**
+ * Security attributes provided by the calling SAP system during authentication.
+ *
+ * @typedef {Object} RfcSecurityAttributes
+ * @property {string} abapFunctionName - Name of the ABAP function being called (max 30 chars)
+ * @property {string} sysId - Calling system ID
+ * @property {string} client - Client number (max 3 chars)
+ * @property {string} user - Username
+ * @property {string} progName - Program name
+ * @property {string} sncName - Secure Network Communication name
+ * @property {string} ssoTicket - Single Sign-On ticket
+ * @property {string} sncAclKey - SNC Access Control List key
+ * @property {number} sncAclKeyLength - Length of SNC ACL key
+ */
 export type RfcSecurityAttributes = {
     abapFunctionName: string[30];
     sysId: string;
@@ -32,12 +46,37 @@ export type RfcSecurityAttributes = {
     sncAclKeyLength: number;
 };
 
+/**
+ * Return type for RFC authentication handlers.
+ *
+ * @typedef {undefined | RFC_RC.RFC_OK | boolean | string} RfcAuthHandlerResponse
+ * - undefined or RFC_RC.RFC_OK or true: Authentication succeeds
+ * - false: Authentication fails
+ * - string: Authentication fails with custom error message
+ */
 export type RfcAuthHandlerResponse =
     | undefined
     | RFC_RC.RFC_OK
     | boolean
     | string;
 
+/**
+ * Authentication handler callback for validating incoming RFC requests.
+ *
+ * @callback RfcAuthHandler
+ * @param {RfcSecurityAttributes} securityAttributes - Security information from the calling system
+ * @param {...unknown} args - Additional optional arguments
+ * @returns {RfcAuthHandlerResponse | Promise<RfcAuthHandlerResponse>} Authentication result
+ *
+ * @example
+ * const authHandler = async (securityAttributes) => {
+ *   console.log(`Auth request from user: ${securityAttributes.user}`);
+ *   if (securityAttributes.user === 'ALLOWED_USER') {
+ *     return true; // Allow
+ *   }
+ *   return 'User not authorized'; // Deny with message
+ * };
+ */
 export type RfcAuthHandler = (
     securityAttributes: RfcSecurityAttributes,
     ...[unknown]
@@ -98,6 +137,59 @@ export interface RfcServerBinding {
     getFunctionDescription(rfmName: string, callback?: Function): void;
 }
 
+/**
+ * RFC Server for accepting incoming RFC calls from SAP systems.
+ *
+ * The Server class allows Node.js applications to act as RFC servers, receiving
+ * and processing function calls from ABAP systems. It supports authentication handlers,
+ * background RFC (bgRFC) processing, and dynamic function registration.
+ *
+ * @class Server
+ *
+ * @example
+ * // Basic RFC server setup
+ * const server = new Server({
+ *   serverConnection: {
+ *     gwhost: 'gateway.example.com',
+ *     gwserv: '3300',
+ *     tpname: 'NODE_RFC_SERVER',
+ *     program_id: 'NODE_SERVER'
+ *   },
+ *   clientConnection: {
+ *     ashost: '10.68.110.51',
+ *     sysnr: '00',
+ *     user: 'demo',
+ *     passwd: 'welcome',
+ *     client: '620',
+ *     lang: 'EN'
+ *   }
+ * });
+ *
+ * @example
+ * // Register function handlers
+ * await server.addFunction('STFC_CONNECTION', async (request) => {
+ *   console.log('Request:', request.REQUTEXT);
+ *   return {
+ *     ECHOTEXT: request.REQUTEXT,
+ *     RESPTEXT: 'Hello from Node.js RFC Server'
+ *   };
+ * });
+ *
+ * await server.start();
+ * console.log('RFC server running...');
+ *
+ * @example
+ * // With authentication handler
+ * const server = new Server({
+ *   serverConnection: serverParams,
+ *   clientConnection: clientParams,
+ *   serverOptions: {
+ *     authHandler: async (secAttrs) => {
+ *       return secAttrs.user === 'ALLOWED_USER';
+ *     }
+ *   }
+ * });
+ */
 export class Server {
     private __server: RfcServerBinding;
 
