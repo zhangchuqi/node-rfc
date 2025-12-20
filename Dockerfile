@@ -55,8 +55,18 @@ COPY web-app/package*.json ./
 # 安装 web-app 依赖（包括 devDependencies，build 需要 TypeScript）
 RUN npm install
 
-# 复制 web-app 源代码
-COPY web-app ./
+# 复制 web-app 源代码（排除 node_modules）
+COPY web-app/app ./app
+COPY web-app/components ./components
+COPY web-app/lib ./lib
+COPY web-app/prisma ./prisma
+COPY web-app/public ./public
+COPY web-app/scripts ./scripts
+COPY web-app/*.ts ./
+COPY web-app/*.js ./
+COPY web-app/*.mjs ./
+COPY web-app/*.json ./
+COPY web-app/.env.example ./ 
 
 # 生成 Prisma 客户端
 RUN npx prisma generate

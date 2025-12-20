@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import JSONMapper from '@/components/JSONMapper';
+import JSONMapperVisual from '@/components/JSONMapperVisual';
 import { RefreshCw, Search, Play, FileJson } from 'lucide-react';
 
 interface Connection {
@@ -372,6 +373,36 @@ export default function NewRFCTemplatePage() {
               )}
 
               <div className="space-y-2">
+                <Label htmlFor="apiInputExample">API Input Example (JSON)</Label>
+                <Textarea
+                  id="apiInputExample"
+                  value={apiInputExample}
+                  onChange={(e) => setApiInputExample(e.target.value)}
+                  placeholder='{"customerId": "100001"}'
+                  rows={4}
+                  className="font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Define what format external systems will send to your API
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="apiOutputExample">API Output Example (JSON)</Label>
+                <Textarea
+                  id="apiOutputExample"
+                  value={apiOutputExample}
+                  onChange={(e) => setApiOutputExample(e.target.value)}
+                  placeholder='{"customer": {"name": "...", "phone": "..."}}'
+                  rows={4}
+                  className="font-mono text-xs"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Define what format to return to external systems
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="apiPath">API Path *</Label>
                 <Input
                   id="apiPath"
@@ -451,48 +482,24 @@ export default function NewRFCTemplatePage() {
                   </TabsList>
                   
                   <TabsContent value="input" className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>API Input Example (JSON)</Label>
-                      <Textarea
-                        value={apiInputExample}
-                        onChange={(e) => setApiInputExample(e.target.value)}
-                        placeholder='{"customerId": "100001"}'
-                        rows={4}
-                        className="font-mono text-xs"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Define what format external systems will send
-                      </p>
-                    </div>
-                    
-                    <JSONMapper
+                    <JSONMapperVisual
                       direction="input"
-                      apiSchema={JSON.parse(apiInputExample || '{}')}
-                      rfcSchema={metadata.inputSchema}
+                      sourceLabel="API"
+                      targetLabel="RFC"
+                      sourceSchema={JSON.parse(apiInputExample || '{}')}
+                      targetSchema={metadata.inputSchema}
                       mappings={inputMappings}
                       onChange={setInputMappings}
                     />
                   </TabsContent>
                   
                   <TabsContent value="output" className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>API Output Example (JSON)</Label>
-                      <Textarea
-                        value={apiOutputExample}
-                        onChange={(e) => setApiOutputExample(e.target.value)}
-                        placeholder='{"customer": {...}}'
-                        rows={4}
-                        className="font-mono text-xs"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Define what format to return to external systems
-                      </p>
-                    </div>
-                    
-                    <JSONMapper
+                    <JSONMapperVisual
                       direction="output"
-                      apiSchema={testResult?.result || metadata.outputSchema}
-                      rfcSchema={JSON.parse(apiOutputExample || '{}')}
+                      sourceLabel="RFC"
+                      targetLabel="API"
+                      sourceSchema={testResult?.result || metadata.outputSchema}
+                      targetSchema={JSON.parse(apiOutputExample || '{}')}
                       mappings={outputMappings}
                       onChange={setOutputMappings}
                     />
