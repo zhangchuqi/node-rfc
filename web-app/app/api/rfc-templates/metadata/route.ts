@@ -1,6 +1,16 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { callRFC } from '@/lib/sap-client';
+import { callRFC as callRFCHttp } from '@/lib/rfc-api-client';
+import { toSAPParams } from '@/lib/sap-client';
+
+// 动态导入本地 sap-client（仅在开发环境）
+let callRFCLocal: any = null;
+try {
+  const localClient = require('@/lib/sap-client-local');
+  callRFCLocal = localClient.callRFC;
+} catch (e) {
+  // 生产环境，没有 sap-client-local
+}
 
 // 获取 RFC 函数的元数据（参数结构）
 export async function POST(request: Request) {
@@ -29,11 +39,40 @@ export async function POST(request: Request) {
 
     // 调用 RFC_GET_FUNCTION_INTERFACE 获取函数元数据
     try {
-      const metadata = await callRFC(
-        connection,
-        'RFC_GET_FUNCTION_INTERFACE',
-        { FUNCNAME: rfmName.toUpperCase() }
-      );
+      let metadata;
+      
+      // 本地开发：直接调用 RFC
+      if (callRFCLocal && process.env.NODE_ENV === 'development') {
+        metadata = await callRFCLocal(
+          connection,
+          'RFC_GET_FUNCTION_INTERFACE',
+          { FUNCNAME: rfmName.toUpperCase() }
+        );
+      } 
+      // 生产环境：通过 HTTP 调用 RFC API Server
+      else if (process.env.RFC_API_URL) {
+        const sapParams = toSAPParams(connection);
+        const response = await callRFCHttp({
+          connection: sapParams,
+          rfmName: 'RFC_GET_FUNCTION_INTERFACE',
+          parameters: { FUNCNAME: rfmName.toUpperCase() }
+        });
+        
+        if (!response.success) {
+          throw new Error(response.error || 'RFC call failed');
+        }
+        metadata = response.data;
+      }
+      // 既没有本地 RFC 也没有 RFC API Server
+      else {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'RFC not available. Set RFC_API_URL environment variable to use RFC API Server.',
+          },
+          { status: 503 }
+        );
+      }
 
       // 解析参数结构
       const inputSchema = {

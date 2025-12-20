@@ -83,3 +83,24 @@ export async function closeAllConnections(): Promise<void> {
   // No-op in production
   console.log('closeAllConnections: No active connections in production mode');
 }
+
+/**
+ * DEPRECATED in production
+ * Alias for closeAllConnections
+ */
+export async function closeSAPConnection(connectionId: string): Promise<void> {
+  // No-op in production
+  console.log(`closeSAPConnection(${connectionId}): No-op in production mode`);
+}
+
+/**
+ * DEPRECATED in production
+ * Test SAP connection
+ */
+export async function testConnection(connection: SAPConnection): Promise<boolean> {
+  // In production, always return false or throw error
+  throw new Error(
+    'testConnection is not available in production. ' +
+    'Use RFC API Client to test connections via RFC API Server.'
+  );
+}
