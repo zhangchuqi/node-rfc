@@ -31,9 +31,8 @@ COPY package*.json ./
 COPY binding.gyp ./
 COPY src ./src
 COPY lib ./lib
-COPY prebuilds ./prebuilds
 
-# 构建 node-rfc
+# 构建 node-rfc（强制从源码构建）
 RUN npm install --build-from-source
 
 # 复制 web-app
