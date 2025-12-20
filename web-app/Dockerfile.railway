@@ -8,15 +8,29 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# 先复制所有源代码
-COPY . .
+# 复制 package 文件先安装依赖
+COPY package*.json ./
 
 # 安装所有依赖（包括 devDependencies）
-# 不设置 NODE_ENV=production，这样才会安装 typescript
-RUN npm ci || npm install
+RUN npm install
+
+# 复制 tsconfig 和其他配置文件
+COPY tsconfig.json ./
+COPY next.config.ts ./
+COPY tailwind.config.ts ./
+COPY postcss.config.mjs ./
+COPY components.json ./
+
+# 复制 prisma schema
+COPY prisma ./prisma/
 
 # 生成 Prisma 客户端
 RUN npx prisma generate
+
+# 复制源代码
+COPY app ./app/
+COPY components ./components/
+COPY lib ./lib/
 
 # 构建 Next.js
 RUN npm run build
