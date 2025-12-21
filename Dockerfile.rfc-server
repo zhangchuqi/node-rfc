@@ -29,13 +29,13 @@ WORKDIR /tmp/node-rfc-build
 # 复制根目录必需文件
 COPY package*.json binding.gyp ./
 COPY src ./src
-
-# 复制已编译的 lib 目录（如果存在）或 TypeScript 配置
-COPY lib ./lib
 COPY tsconfig.json ./tsconfig.json
 
-# 安装依赖并构建 C++ 扩展
+# 安装依赖（包括 TypeScript）
 RUN npm install --verbose
+
+# 编译 TypeScript 生成 lib 目录
+RUN npm run ts
 
 # ============================================
 # 构建 RFC Server
