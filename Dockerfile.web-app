@@ -1,4 +1,5 @@
 # Railway 部署配置 - Web App (Mock 模式)
+# Updated: 2025-12-21 - Simplified build process
 FROM node:18-bullseye-slim
 
 # 安装系统依赖

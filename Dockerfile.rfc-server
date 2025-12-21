@@ -1,4 +1,5 @@
 # Railway 部署配置 - RFC Server (需要 SAP SDK)
+# Updated: 2025-12-21 - Fixed lib directory issue
 FROM node:18-bullseye
 
 # 安装系统依赖
