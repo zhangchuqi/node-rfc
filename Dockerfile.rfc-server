@@ -5,6 +5,9 @@ FROM node:18-bullseye
 RUN apt-get update && apt-get install -y \
     libuuid1 \
     libstdc++6 \
+    python3 \
+    make \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
 # ============================================
@@ -22,32 +25,27 @@ ENV LIBRARY_PATH=/usr/local/sap/nwrfcsdk/lib
 # ============================================
 WORKDIR /tmp/node-rfc-build
 
-# 复制根目录项目文件
-COPY package*.json ./
-COPY binding.gyp ./
-COPY tsconfig.json ./
+# 复制根目录必需文件
+COPY package*.json binding.gyp ./
 COPY src ./src
-COPY lib ./lib
+
+# 创建 lib 目录（TypeScript 编译输出）
+RUN mkdir -p ./lib
 
 # 安装依赖并构建 C++ 扩展
-RUN npm install
+RUN npm install --verbose
 
 # ============================================
 # 构建 RFC Server
 # ============================================
 WORKDIR /app
 
-# 复制 rfc-server 文件
-COPY rfc-server/package*.json ./
+# 复制整个 rfc-server 目录
+COPY rfc-server ./
 
-# 安装依赖（引用本地 node-rfc）
-RUN npm install
-
-# 复制 rfc-server 代码
-COPY rfc-server/ ./
-
-# 链接本地构建的 node-rfc
-RUN npm install /tmp/node-rfc-build
+# 安装依赖并链接本地 node-rfc
+RUN npm install /tmp/node-rfc-build && \
+    npm install express cors
 
 # 设置生产环境
 ENV NODE_ENV=production
