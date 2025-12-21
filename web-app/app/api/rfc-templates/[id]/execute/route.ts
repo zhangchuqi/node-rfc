@@ -39,6 +39,12 @@ export async function POST(
     };
 
     // 调用 SAP RFC
+    if (!template.connection) {
+      throw new Error('Template connection not found');
+    }
+    if (!template.rfmName) {
+      throw new Error('Template RFC function name not configured');
+    }
     const result = await callRFC(template.connection, template.rfmName, finalParams);
 
     const duration = Date.now() - startTime;

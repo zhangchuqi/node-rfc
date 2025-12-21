@@ -75,18 +75,41 @@ export async function POST(request: Request) {
       }
 
       // 解析参数结构
-      // RFC_GET_FUNCTION_INTERFACE 返回的字段名可能是：
-      // IMPORT_PARAMETER, EXPORT_PARAMETER, CHANGING_PARAMETER, TABLES_PARAMETER
-      // 或者 IMPORTING, EXPORTING, CHANGING, TABLES
+      // RFC_GET_FUNCTION_INTERFACE 返回 PARAMS 数组，需要根据 PARAMCLASS 分类：
+      // PARAMCLASS: 'I' = IMPORTING, 'E' = EXPORTING, 'T' = TABLES, 'C' = CHANGING
+      const params = metadata.PARAMS || [];
+      
+      const importParams: any[] = [];
+      const exportParams: any[] = [];
+      const tablesParams: any[] = [];
+      const changingParams: any[] = [];
+      
+      params.forEach((param: any) => {
+        switch (param.PARAMCLASS) {
+          case 'I':
+            importParams.push(param);
+            break;
+          case 'E':
+            exportParams.push(param);
+            break;
+          case 'T':
+            tablesParams.push(param);
+            break;
+          case 'C':
+            changingParams.push(param);
+            break;
+        }
+      });
+      
       const inputSchema = {
-        IMPORTING: metadata.IMPORT_PARAMETER || metadata.IMPORTING || [],
-        TABLES: metadata.TABLES_PARAMETER || metadata.TABLES || [],
-        CHANGING: metadata.CHANGING_PARAMETER || metadata.CHANGING || [],
+        IMPORTING: importParams,
+        TABLES: tablesParams,
+        CHANGING: changingParams,
       };
 
       const outputSchema = {
-        EXPORTING: metadata.EXPORT_PARAMETER || metadata.EXPORTING || [],
-        TABLES: metadata.TABLES_PARAMETER || metadata.TABLES || [],
+        EXPORTING: exportParams,
+        TABLES: tablesParams,
       };
 
       return NextResponse.json({

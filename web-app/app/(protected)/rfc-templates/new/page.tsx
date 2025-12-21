@@ -192,7 +192,9 @@ export default function NewRFCTemplatePage() {
 
       const data = await res.json();
       if (data.success) {
-        router.push('/rfc-templates');
+        // 创建成功后，直接跳转到工作流编辑器
+        const templateId = data.data.id;
+        router.push(`/rfc-templates/${templateId}/workflow`);
       } else {
         alert('Error: ' + data.error);
       }

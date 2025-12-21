@@ -41,8 +41,10 @@ export async function POST(request: Request) {
         connectionId: body.connectionId,
         rfmName: body.rfmName,
         parameters: body.parameters || null,
+        workflowDefinition: body.workflowDefinition || null,
         apiPath: body.apiPath || null,
         apiKey: body.apiKey,
+        status: body.status || 'DRAFT',
         isActive: body.isActive !== undefined ? body.isActive : true,
       },
       include: {

@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ReactFlow styles */
+@import '@xyflow/react/dist/style.css';
+
+/* Custom ReactFlow styling with shadcn theme */
+.react-flow__node {
+  cursor: grab;
+}
+
+.react-flow__node.dragging {
+  cursor: grabbing;
+}
+
+.react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid white;
+}
+
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: hsl(var(--primary));
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

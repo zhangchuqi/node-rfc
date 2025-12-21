@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { callRFC } from '@/lib/sap-client';
+import { callRFC, toSAPParams } from '@/lib/sap-client';
 import { applyMapping, applyReverseMapping, mergeWithDefaults } from '@/lib/json-mapper';
+import { executeWorkflow, validateWorkflow } from '@/lib/workflow-executor';
+import { callRFCViaAPI } from '@/lib/rfc-api-client';
 
 // 公共 API 端点 - 通过 API 路径调用 RFC
 export async function POST(
@@ -50,7 +52,13 @@ export async function POST(
       );
     }
 
-    // 检查连接是否激活
+    // 检查连接是否存在并激活
+    if (!template.connection) {
+      return NextResponse.json(
+        { success: false, error: 'Template connection not found' },
+        { status: 400 }
+      );
+    }
     if (!template.connection.isActive) {
       return NextResponse.json(
         { success: false, error: 'SAP connection is inactive' },
@@ -58,27 +66,99 @@ export async function POST(
       );
     }
 
-    // 合并参数
-    const finalParams = {
-      ...(template.parameters as object || {}),
-      ...(body.parameters || {}),
-    };
+    // 检查是否使用工作流模式
+    let rfcResult: any;
+    let apiResult: any;
+    let rfcParams: any;
 
-    // 应用输入映射（如果配置了映射规则）
-    const mappedParams = template.inputMapping 
-      ? applyMapping(body.parameters || {}, template.inputMapping as any)
-      : body.parameters || {};
+    if (template.workflowDefinition) {
+      // 新模式：执行可视化工作流
+      const workflow = template.workflowDefinition as any;
+      
+      // 验证工作流
+      const validation = validateWorkflow(workflow);
+      if (!validation.valid) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Invalid workflow definition',
+            details: validation.errors 
+          },
+          { status: 400 }
+        );
+      }
 
-    // 合并映射后的参数和默认参数
-    const rfcParams = mergeWithDefaults(mappedParams, template.parameters as any);
+      // 创建 RFC 执行器
+      const rfcExecutor = async (connectionId: string, rfmName: string, params: any) => {
+        if (!template.connection) {
+          throw new Error('Template connection not found');
+        }
+        // 检查是否使用 RFC API Server
+        if (process.env.RFC_API_URL) {
+          const sapParams = toSAPParams(template.connection);
+          const response = await callRFCViaAPI({
+            connection: sapParams,
+            rfmName,
+            parameters: params
+          });
+          
+          if (!response.success) {
+            throw new Error(response.error || 'RFC call failed');
+          }
+          
+          return response.data;
+        } else {
+          // 本地直接调用
+          if (!template.connection) {
+            throw new Error('Template connection not found');
+          }
+          return await callRFC(template.connection, rfmName, params);
+        }
+      };
 
-    // 调用 SAP RFC
-    const rfcResult = await callRFC(template.connection, template.rfmName, rfcParams);
+      // 执行工作流
+      const workflowResult = await executeWorkflow(
+        workflow,
+        body.parameters || {},
+        rfcExecutor
+      );
 
-    // 应用输出映射（如果配置了映射规则）
-    const apiResult = template.outputMapping
-      ? applyReverseMapping(rfcResult, template.outputMapping as any)
-      : rfcResult;
+      if (!workflowResult.success) {
+        throw new Error(workflowResult.error || 'Workflow execution failed');
+      }
+
+      apiResult = workflowResult.result;
+      rfcParams = body.parameters || {};
+      rfcResult = workflowResult.result;
+    } else {
+      // 旧模式：使用 inputMapping/outputMapping
+      const finalParams = {
+        ...(template.parameters as object || {}),
+        ...(body.parameters || {}),
+      };
+
+      // 应用输入映射（如果配置了映射规则）
+      const mappedParams = template.inputMapping 
+        ? applyMapping(body.parameters || {}, template.inputMapping as any)
+        : body.parameters || {};
+
+      // 合并映射后的参数和默认参数
+      rfcParams = mergeWithDefaults(mappedParams, template.parameters as any);
+
+      // 调用 SAP RFC
+      if (!template.connection) {
+        throw new Error('Template connection not found');
+      }
+      if (!template.rfmName) {
+        throw new Error('Template RFC function name not configured');
+      }
+      rfcResult = await callRFC(template.connection, template.rfmName, rfcParams);
+
+      // 应用输出映射（如果配置了映射规则）
+      apiResult = template.outputMapping
+        ? applyReverseMapping(rfcResult, template.outputMapping as any)
+        : rfcResult;
+    }
 
     const duration = Date.now() - startTime;
 
@@ -86,7 +166,7 @@ export async function POST(
     await prisma.rFCCall.create({
       data: {
         templateId: template.id,
-        rfmName: template.rfmName,
+        rfmName: template.rfmName || '',
         parameters: rfcParams,
         result: rfcResult as any,
         duration,

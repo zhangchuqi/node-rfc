@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
     config.externals = [...(config.externals || []), 'node-rfc'];
     return config;
   },
+  transpilePackages: ['@xyflow/react'],
 };
 
 export default nextConfig;

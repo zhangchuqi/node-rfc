@@ -55,6 +55,13 @@ export async function callRFC(params: RFCCallParams): Promise<RFCResponse> {
 }
 
 /**
+ * 通过 API 调用 RFC（别名函数，用于兼容不同的导入方式）
+ */
+export async function callRFCViaAPI(params: RFCCallParams): Promise<RFCResponse> {
+  return callRFC(params);
+}
+
+/**
  * 测试 RFC 连接
  */
 export async function testRFCConnection(connection: RFCConnection): Promise<RFCResponse> {

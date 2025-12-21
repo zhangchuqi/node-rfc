@@ -115,25 +115,76 @@ export default function CallPage() {
     setError('');
 
     try {
-      const res = await fetch('/api/sap/metadata', {
+      const res = await fetch('/api/rfc-templates/metadata', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           connectionId: selectedConnection,
-          functionName: rfmName,
+          rfmName: rfmName,
         }),
       });
 
       const data = await res.json();
-      if (res.ok) {
-        // Use grouped parameters for form view, flat template for JSON view
-        const groupedData = data.groupedParameters;
-        const templateData = JSON.parse(data.formattedTemplate);
+      if (res.ok && data.success) {
+        // Check if response has inputTemplate (from RFC Server) or inputSchema (from metadata API)
+        let formattedTemplate = '';
+        let groupedData: any = {};
+        
+        if (data.inputTemplate) {
+          // RFC Server format - already has inputTemplate
+          formattedTemplate = JSON.stringify(data.inputTemplate, null, 2);
+          
+          // Build grouped data from parameters for form view
+          const params = data.metadata?.parameters || {};
+          groupedData = {
+            IMPORTING: [],
+            TABLES: [],
+            CHANGING: []
+          };
+          
+          Object.values(params).forEach((param: any) => {
+            if (param.direction === 'RFC_IMPORT') {
+              groupedData.IMPORTING.push(param);
+            } else if (param.direction === 'RFC_TABLES') {
+              groupedData.TABLES.push(param);
+            } else if (param.direction === 'RFC_CHANGING') {
+              groupedData.CHANGING.push(param);
+            }
+          });
+        } else if (data.data?.inputSchema) {
+          // Metadata API format
+          const metadata = data.data;
+          groupedData = {
+            IMPORTING: metadata.inputSchema?.IMPORTING || [],
+            TABLES: metadata.inputSchema?.TABLES || [],
+            CHANGING: metadata.inputSchema?.CHANGING || [],
+          };
+          
+          // Create formatted template from schema
+          const template: any = {};
+          if (groupedData.IMPORTING?.length > 0) {
+            groupedData.IMPORTING.forEach((param: any) => {
+              template[param.PARAMETER || param.name] = '';
+            });
+          }
+          if (groupedData.TABLES?.length > 0) {
+            groupedData.TABLES.forEach((param: any) => {
+              template[param.PARAMETER || param.name] = [];
+            });
+          }
+          if (groupedData.CHANGING?.length > 0) {
+            groupedData.CHANGING.forEach((param: any) => {
+              template[param.PARAMETER || param.name] = '';
+            });
+          }
+          
+          formattedTemplate = JSON.stringify(template, null, 2);
+        }
         
         setFormData(groupedData);
-        setFieldMetadata(data.fieldMetadata || {});
-        setParameters(data.formattedTemplate);
-        setViewMode('form'); // Switch to form view
+        setFieldMetadata({});
+        setParameters(formattedTemplate);
+        setViewMode('json'); // Switch to JSON view to show the template
         alert('Parameter structure loaded successfully!');
       } else {
         setError(data.error || 'Failed to get function metadata');

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Settings, Play, Link as LinkIcon } from 'lucide-react';
+import { Plus, Trash2, Settings, Play, Link as LinkIcon, Workflow } from 'lucide-react';
 
 interface RFCTemplate {
   id: string;
@@ -72,7 +72,7 @@ export default function RFCTemplatesPage() {
             <h1 className="text-4xl font-bold mb-2">RFC Templates</h1>
             <p className="text-muted-foreground">Manage predefined RFC call configurations</p>
           </div>
-          <Link href="/rfc-templates/new">
+          <Link href="/rfc-templates/create">
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               New Template
@@ -89,8 +89,13 @@ export default function RFCTemplatesPage() {
           </CardHeader>
           <CardContent>
             {templates.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No templates yet. Create your first RFC template to get started.
+              <div className="text-center py-12">
+                <div className="text-muted-foreground mb-4">
+                  No templates yet. Create your first RFC template to get started.
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  💡 After creating a template, you can design its workflow visually using the workflow editor.
+                </div>
               </div>
             ) : (
               <Table>
@@ -118,10 +123,12 @@ export default function RFCTemplatesPage() {
                       </TableCell>
                       <TableCell>
                         <code className="text-sm bg-muted px-2 py-1 rounded">
-                          {template.rfmName}
+                          {template.rfmName || '-'}
                         </code>
                       </TableCell>
-                      <TableCell>{template.connection.name}</TableCell>
+                      <TableCell>
+                        {template.connection?.name || <span className="text-muted-foreground">-</span>}
+                      </TableCell>
                       <TableCell>
                         {template.apiPath ? (
                           <div className="flex items-center gap-2">
@@ -142,6 +149,11 @@ export default function RFCTemplatesPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Link href={`/rfc-templates/${template.id}/workflow`}>
+                            <Button variant="ghost" size="icon" title="工作流编辑器">
+                              <Workflow className="h-4 w-4" />
+                            </Button>
+                          </Link>
                           <Link href={`/rfc-templates/${template.id}/execute`}>
                             <Button variant="ghost" size="icon" title="执行">
                               <Play className="h-4 w-4" />

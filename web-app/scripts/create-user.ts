@@ -18,6 +18,7 @@ async function createUser() {
 
     const user = await prisma.user.create({
       data: {
+        username: email.split('@')[0], // 使用 email 前缀作为 username
         email,
         password: hashedPassword,
         name: name || null,
