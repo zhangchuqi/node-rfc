@@ -1,0 +1,48 @@
+# Railway 部署配置 - Web App (Mock 模式)
+FROM node:18-bullseye-slim
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# 复制 package 文件
+COPY web-app/package*.json ./
+
+# 安装所有依赖
+RUN npm ci
+
+# 复制配置文件
+COPY web-app/tsconfig.json ./
+COPY web-app/next.config.ts ./
+COPY web-app/tailwind.config.ts ./
+COPY web-app/postcss.config.mjs ./
+COPY web-app/components.json ./
+COPY web-app/middleware.ts ./
+
+# 复制 Prisma schema
+COPY web-app/prisma ./prisma/
+
+# 生成 Prisma 客户端
+RUN npx prisma generate
+
+# 复制源代码
+COPY web-app/app ./app/
+COPY web-app/components ./components/
+COPY web-app/lib ./lib/
+COPY web-app/public ./public/
+
+# 构建 Next.js
+RUN npm run build
+
+# 设置生产环境
+ENV NODE_ENV=production
+ENV MOCK_MODE=true
+
+EXPOSE 3000
+
+# 启动命令：先运行迁移再启动应用
+CMD ["sh", "-c", "npx prisma migrate deploy && npm start"]

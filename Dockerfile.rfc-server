@@ -1,0 +1,59 @@
+# Railway 部署配置 - RFC Server (需要 SAP SDK)
+FROM node:18-bullseye
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    libuuid1 \
+    libstdc++6 \
+    && rm -rf /var/lib/apt/lists/*
+
+# ============================================
+# 安装 SAP NW RFC SDK
+# ============================================
+COPY nwrfcsdk /usr/local/sap/nwrfcsdk
+
+# 设置 SAP SDK 环境变量
+ENV SAPNWRFC_HOME=/usr/local/sap/nwrfcsdk
+ENV LD_LIBRARY_PATH=/usr/local/sap/nwrfcsdk/lib
+ENV LIBRARY_PATH=/usr/local/sap/nwrfcsdk/lib
+
+# ============================================
+# 构建 node-rfc（根目录项目）
+# ============================================
+WORKDIR /tmp/node-rfc-build
+
+# 复制根目录项目文件
+COPY package*.json ./
+COPY binding.gyp ./
+COPY tsconfig.json ./
+COPY src ./src
+COPY lib ./lib
+
+# 安装依赖并构建 C++ 扩展
+RUN npm install
+
+# ============================================
+# 构建 RFC Server
+# ============================================
+WORKDIR /app
+
+# 复制 rfc-server 文件
+COPY rfc-server/package*.json ./
+
+# 安装依赖（引用本地 node-rfc）
+RUN npm install
+
+# 复制 rfc-server 代码
+COPY rfc-server/ ./
+
+# 链接本地构建的 node-rfc
+RUN npm install /tmp/node-rfc-build
+
+# 设置生产环境
+ENV NODE_ENV=production
+ENV PORT=3001
+
+EXPOSE 3001
+
+# 启动 RFC Server
+CMD ["node", "index.js"]
