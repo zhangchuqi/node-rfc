@@ -5,21 +5,34 @@
 ✅ **Dockerfile 已修复并推送到 GitHub**
 - Commit 1: `fix: Update Dockerfiles to resolve Railway build issues`
 - Commit 2: `fix: Copy lib directory in RFC Server Dockerfile`
+- Commit 3: `fix: Build lib directory from TypeScript during Docker build` ⭐
 - 时间: 2025-12-21
 
 ## 修复的问题
 
-### 1. RFC Server - `/lib` 目录不存在
-**问题**: Dockerfile 尝试 `COPY lib ./lib` 但该目录不存在
+### 1. RFC Server - `/lib` 目录不存在且在 .gitignore 中
+**问题**: 
+- lib/ 目录在 .gitignore 中被排除
+- 不会被推送到 Git 仓库
+- Railway 构建时找不到该目录
 
-**解决方案**:
+**最终解决方案**:
 ```dockerfile
-# 最终正确的方式
-COPY lib ./lib
+# 复制 TypeScript 源码和配置
+COPY src ./src
 COPY tsconfig.json ./tsconfig.json
+
+# 安装依赖（包括 TypeScript）
+RUN npm install --verbose
+
+# 编译 TypeScript 生成 lib 目录
+RUN npm run ts
 ```
 
-**说明**: lib 目录包含编译后的 TypeScript 文件，node-rfc 的 package.json 指向 `./lib/index.js` 作为入口点。
+**说明**: 
+- 在 Docker 构建期间编译 TypeScript
+- 生成所需的 lib/index.js 和其他 .js/.d.ts 文件
+- 不依赖 Git 仓库中的编译文件
 
 ### 2. RFC Server - 运行时找不到 node-rfc 模块
 **错误信息**:
