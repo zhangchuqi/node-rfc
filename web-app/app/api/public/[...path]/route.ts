@@ -171,6 +171,7 @@ export async function POST(
         result: rfcResult as any,
         duration,
         status: 'SUCCESS',
+        requestBody: body,
         source: 'api',
         calledBy: clientIp,
       },
@@ -190,6 +191,25 @@ export async function POST(
     const { path } = await params;
     const apiPath = '/' + path.join('/');
 
+    // 提取详细的错误信息
+    const errorDetails: any = {
+      message: error.message,
+      name: error.name,
+      code: error.code,
+      key: error.key,
+    };
+
+    // SAP ABAP 错误信息
+    if (error.abapMsgClass) errorDetails.abapMsgClass = error.abapMsgClass;
+    if (error.abapMsgType) errorDetails.abapMsgType = error.abapMsgType;
+    if (error.abapMsgNumber) errorDetails.abapMsgNumber = error.abapMsgNumber;
+    if (error.abapMsgV1) errorDetails.abapMsgV1 = error.abapMsgV1;
+    if (error.abapMsgV2) errorDetails.abapMsgV2 = error.abapMsgV2;
+    if (error.abapMsgV3) errorDetails.abapMsgV3 = error.abapMsgV3;
+    if (error.abapMsgV4) errorDetails.abapMsgV4 = error.abapMsgV4;
+    if (error.group) errorDetails.group = error.group;
+    if (error.stack) errorDetails.stack = error.stack.substring(0, 2000);
+
     // 记录错误
     await prisma.rFCCall.create({
       data: {
@@ -198,6 +218,8 @@ export async function POST(
         duration,
         status: 'ERROR',
         errorMessage: error.message,
+        errorDetails: errorDetails,
+        requestBody: body,
         source: 'api',
         calledBy: clientIp,
       },
@@ -208,6 +230,7 @@ export async function POST(
       {
         success: false,
         error: error.message,
+        errorDetails: process.env.NODE_ENV === 'development' ? errorDetails : undefined,
         meta: {
           duration,
           timestamp: new Date().toISOString(),

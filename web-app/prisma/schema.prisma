@@ -30,12 +30,6 @@ enum UserRole {
   ADMIN
 }
 
-enum TemplateStatus {
-  DRAFT      // 草稿状态
-  PUBLISHED  // 已发布
-  ARCHIVED   // 已归档
-}
-
 // SAP Connection Configuration
 model SAPConnection {
   id             String         @id @default(uuid())
@@ -117,35 +111,26 @@ enum CallStatus {
   CANCELLED
 }
 
-// RFC Template - 预定义的 RFC 配置
+// RFC API 接口定义 - 简化版本，直接映射 REST API 到 SAP RFC
 model RFCTemplate {
   id              String         @id @default(uuid())
-  name            String         @unique
-  description     String?
-  connectionId    String?
-  connection      SAPConnection? @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  name            String         @unique // 接口名称
+  description     String?        // 接口描述
+  connectionId    String         // SAP 连接（必填）
+  connection      SAPConnection  @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   
   // RFC 配置
-  rfmName         String?        @map("rfm_name")
-  parameters      Json?          // 默认参数模板
+  rfmName         String         @map("rfm_name") // SAP RFC 函数名（必填）
   
-  // RFC 元数据（从 SAP 获取的参数结构）
-  inputSchema     Json?          @map("input_schema")  // RFC 输入参数结构
-  outputSchema    Json?          @map("output_schema") // RFC 输出参数结构
-  
-  // JSON 映射配置
-  inputMapping    Json?          @map("input_mapping")  // API 输入 -> RFC 输入的映射规则
-  outputMapping   Json?          @map("output_mapping") // RFC 输出 -> API 输出的映射规则
-  
-  // 可视化工作流定义（ReactFlow 节点和边）
-  workflowDefinition Json?       @map("workflow_definition") // 存储工作流图的节点和连接
+  // JSON 映射配置 - 简单的 JSONPath 映射
+  inputMapping    Json           @map("input_mapping")  // { "rfcParam": "$.apiField" } 格式
+  outputMapping   Json?          @map("output_mapping") // 可选的输出映射，默认返回完整结果
   
   // API 配置
-  apiPath         String?        @unique @map("api_path") // 例如: /api/rfc/get-customer
-  apiKey          String         @map("api_key") // 强制要求 API Key
+  apiPath         String         @unique @map("api_path") // REST API 路径，例如: /api/external/get-customer
+  apiKey          String         @map("api_key") // API 认证密钥
   
   // 元数据
-  status          TemplateStatus @default(DRAFT)
   isActive        Boolean        @default(true)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
@@ -172,7 +157,13 @@ model RFCCall {
   // 性能指标
   duration     Int           // milliseconds
   status       CallStatus
-  errorMessage String?       @db.Text
+  
+  // 详细错误信息
+  errorMessage String?       @db.Text      // 主要错误消息
+  errorDetails Json?                       // 完整错误对象 { code, key, abapMsgClass, abapMsgType, abapMsgNumber, abapMsgV1-4, stack }
+  
+  // 请求响应详情
+  requestBody  Json?                       // 原始请求 body (仅 external_api 来源)
   
   // 来源
   source       String?       // "web", "api", "external"

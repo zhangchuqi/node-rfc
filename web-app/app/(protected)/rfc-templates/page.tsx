@@ -69,32 +69,34 @@ export default function RFCTemplatesPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold mb-2">RFC Templates</h1>
-            <p className="text-muted-foreground">Manage predefined RFC call configurations</p>
+            <h1 className="text-4xl font-bold mb-2">RFC API 接口</h1>
+            <p className="text-muted-foreground">管理 REST API 到 SAP RFC 的映射接口</p>
           </div>
-          <Link href="/rfc-templates/create">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Template
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/rfc-templates/create-simple">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                创建接口
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Templates</CardTitle>
+            <CardTitle>接口列表</CardTitle>
             <CardDescription>
-              {templates.length} template{templates.length !== 1 ? 's' : ''} configured
+              {templates.length} 个接口已配置
             </CardDescription>
           </CardHeader>
           <CardContent>
             {templates.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-muted-foreground mb-4">
-                  No templates yet. Create your first RFC template to get started.
+                  还没有接口。创建第一个 REST API 到 SAP RFC 的映射接口
                 </div>
-                <div className="text-sm text-muted-foreground">
-                  💡 After creating a template, you can design its workflow visually using the workflow editor.
+                <div className="text-sm text-muted-foreground mt-2">
+                  💡 通过简单的 JSON 映射配置，让外部系统通过 REST API 调用 SAP RFC
                 </div>
               </div>
             ) : (
